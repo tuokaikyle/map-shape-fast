@@ -76,6 +76,7 @@ export function HighchartsMapDemo() {
   const [region, setRegion] = useState<RegionId>('world')
   const [mapGeoJSON, setMapGeoJSON] = useState<any>(worldMap as any)
   const [isSwitching, setIsSwitching] = useState(false)
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -121,6 +122,18 @@ export function HighchartsMapDemo() {
   }, [region])
 
   const regionLabel = REGIONS.find((r) => r.id === region)?.label ?? 'World'
+
+  // Extract country names from GeoJSON
+  const countryNames = useMemo(() => {
+    if (!mapGeoJSON?.features) return []
+
+    const names = mapGeoJSON.features
+      .map((feature: any) => feature.properties?.name)
+      .filter((name: string) => name)
+      .sort((a: string, b: string) => a.localeCompare(b))
+
+    return names
+  }, [mapGeoJSON])
 
   const options = useMemo(() => {
     return {
@@ -187,30 +200,63 @@ export function HighchartsMapDemo() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="relative">
-          {!Highcharts ? (
-            <div className="text-muted-foreground flex h-[520px] items-center justify-center rounded-lg border">
-              Loading Highcharts…
-            </div>
-          ) : (
-            <HighchartsReact
-              key={region}
-              highcharts={Highcharts}
-              constructorType="mapChart"
-              options={options}
-            />
-          )}
-          {isSwitching ? (
-            <div className="bg-background/70 absolute inset-0 flex items-center justify-center rounded-lg backdrop-blur-sm">
-              <div className="text-muted-foreground text-sm">
-                Loading {regionLabel}…
+        <div className="flex gap-4">
+          {/* Map section */}
+          <div className="relative flex-1">
+            {!Highcharts ? (
+              <div className="text-muted-foreground flex h-[520px] items-center justify-center rounded-lg border">
+                Loading Highcharts…
+              </div>
+            ) : (
+              <HighchartsReact
+                key={region}
+                highcharts={Highcharts}
+                constructorType="mapChart"
+                options={options}
+              />
+            )}
+            {isSwitching ? (
+              <div className="bg-background/70 absolute inset-0 flex items-center justify-center rounded-lg backdrop-blur-sm">
+                <div className="text-muted-foreground text-sm">
+                  Loading {regionLabel}…
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Country list sidebar */}
+          <div className="w-64 flex-shrink-0">
+            <div className="rounded-lg border p-4">
+              <h3 className="mb-3 text-sm font-semibold">
+                Countries ({countryNames.length})
+              </h3>
+              <div className="max-h-[520px] space-y-1 overflow-y-auto">
+                {countryNames.map((name: string) => (
+                  <button
+                    key={name}
+                    onClick={() => setSelectedCountry(name)}
+                    className={`hover:bg-accent w-full rounded px-2 py-1.5 text-left text-sm transition-colors ${
+                      selectedCountry === name ? 'bg-accent font-medium' : ''
+                    }`}
+                  >
+                    {name}
+                  </button>
+                ))}
               </div>
             </div>
-          ) : null}
+          </div>
         </div>
       </CardContent>
-      <CardFooter className="text-muted-foreground text-sm">
-        <span>Tip: use the map navigation buttons to zoom/pan.</span>
+      <CardFooter className="flex-col items-start gap-2">
+        {selectedCountry && (
+          <div className="bg-muted mb-2 w-full rounded-md border p-3">
+            <span className="text-sm font-medium">Selected Country: </span>
+            <span className="text-sm">{selectedCountry}</span>
+          </div>
+        )}
+        <span className="text-muted-foreground text-sm">
+          Tip: use the map navigation buttons to zoom/pan.
+        </span>
       </CardFooter>
     </Card>
   )
