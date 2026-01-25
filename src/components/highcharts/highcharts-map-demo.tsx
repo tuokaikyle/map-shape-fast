@@ -14,12 +14,24 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const HighchartsReact = dynamic(() => import('highcharts-react-official'), {
   ssr: false,
 })
 
 type MapDatum = [hcKey: string, value: number]
+type MapFeature = {
+  name: string
+  hcKey: string
+  continent: string
+}
 
 function buildRandomMapData(): MapDatum[] {
   const features = (worldMap as any)?.features ?? []
@@ -36,35 +48,65 @@ export function HighchartsMapDemo() {
   const [selected, setSelected] = useState<string | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
   const [correctKeys, setCorrectKeys] = useState<string[]>([])
+  const [selectedRegion, setSelectedRegion] = useState<string>('All regions')
+
+  const mapFeatures = useMemo<MapFeature[]>(() => {
+    const features = (worldMap as any)?.features ?? []
+    return features
+      .map((feature: any) => {
+        const name = String(feature?.properties?.name ?? '')
+        const hcKey = String(feature?.properties?.['hc-key'] ?? '')
+        const continent = String(feature?.properties?.continent ?? '')
+        return { name, hcKey, continent }
+      })
+      .filter((feature: MapFeature) => feature.name && feature.hcKey)
+  }, [])
+
+  const regionOptions = useMemo(() => {
+    const regions = new Set<string>()
+    for (const feature of mapFeatures) {
+      if (feature.continent) regions.add(feature.continent)
+    }
+    return Array.from(regions).sort((a, b) => a.localeCompare(b))
+  }, [mapFeatures])
 
   const nameToKey = useMemo(() => {
-    const features = (worldMap as any)?.features ?? []
     const mapping = new Map<string, string>()
-
-    for (const feature of features) {
-      const name = String(feature?.properties?.name ?? '')
-      const hcKey = String(feature?.properties?.['hc-key'] ?? '')
-      if (name && hcKey && !mapping.has(name)) {
-        mapping.set(name, hcKey)
+    for (const feature of mapFeatures) {
+      if (!mapping.has(feature.name)) {
+        mapping.set(feature.name, feature.hcKey)
       }
     }
 
     return mapping
-  }, [])
+  }, [mapFeatures])
+
+  const filteredFeatures = useMemo(() => {
+    if (selectedRegion === 'All regions') return mapFeatures
+    return mapFeatures.filter((feature) => feature.continent === selectedRegion)
+  }, [mapFeatures, selectedRegion])
 
   const countryNames = useMemo(() => {
-    const features = (worldMap as any)?.features ?? []
-    return features
-      .map((f: any) => String(f?.properties?.name ?? ''))
-      .filter(Boolean)
+    return filteredFeatures
+      .map((feature) => feature.name)
       .sort((a: string, b: string) => a.localeCompare(b))
-  }, [])
+  }, [filteredFeatures])
 
   const correctKeySet = useMemo(() => new Set(correctKeys), [correctKeys])
 
+  const regionKeySet = useMemo(() => {
+    if (selectedRegion === 'All regions') return null
+    return new Set(filteredFeatures.map((feature) => feature.hcKey))
+  }, [filteredFeatures, selectedRegion])
+
+  const filteredData = useMemo(() => {
+    if (!regionKeySet) return data
+    return data.filter(([hcKey]) => regionKeySet.has(hcKey))
+  }, [data, regionKeySet])
+
   const seriesData = useMemo(() => {
-    if (correctKeys.length === 0) return data
-    return data.map(([hcKey, value]) => {
+    if (correctKeys.length === 0) return filteredData
+    return filteredData.map(([hcKey, value]) => {
       if (!correctKeySet.has(hcKey)) return [hcKey, value] as MapDatum
       return {
         'hc-key': hcKey,
@@ -72,7 +114,7 @@ export function HighchartsMapDemo() {
         color: '#22c55e',
       }
     })
-  }, [correctKeySet, correctKeys.length, data])
+  }, [correctKeySet, correctKeys.length, filteredData])
 
   useEffect(() => {
     let cancelled = false
@@ -133,6 +175,7 @@ export function HighchartsMapDemo() {
           name: 'Value',
           data: seriesData,
           joinBy: 'hc-key',
+          allAreas: selectedRegion === 'All regions',
           borderColor: 'rgba(0,0,0,0.15)',
           borderWidth: 0.5,
           nullColor: 'rgba(0,0,0,0.04)',
@@ -149,7 +192,7 @@ export function HighchartsMapDemo() {
       ],
       credits: { enabled: false },
     }
-  }, [seriesData])
+  }, [selectedRegion, seriesData])
 
   return (
     <Card>
@@ -162,6 +205,28 @@ export function HighchartsMapDemo() {
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline">
+                Region: {selectedRegion}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup
+                value={selectedRegion}
+                onValueChange={setSelectedRegion}
+              >
+                <DropdownMenuRadioItem value="All regions">
+                  All regions
+                </DropdownMenuRadioItem>
+                {regionOptions.map((region) => (
+                  <DropdownMenuRadioItem key={region} value={region}>
+                    {region}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             type="button"
             variant="outline"
