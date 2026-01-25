@@ -35,6 +35,7 @@ export function HighchartsMapDemo() {
   const [data, setData] = useState<MapDatum[]>(() => buildRandomMapData())
   const [selected, setSelected] = useState<string | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
+  const [correctKeys, setCorrectKeys] = useState<string[]>([])
 
   const nameToKey = useMemo(() => {
     const features = (worldMap as any)?.features ?? []
@@ -59,23 +60,19 @@ export function HighchartsMapDemo() {
       .sort((a: string, b: string) => a.localeCompare(b))
   }, [])
 
-  const highlightedKey = useMemo(() => {
-    if (!picked || !selected) return null
-    if (picked !== selected) return null
-    return nameToKey.get(selected) ?? null
-  }, [nameToKey, picked, selected])
+  const correctKeySet = useMemo(() => new Set(correctKeys), [correctKeys])
 
   const seriesData = useMemo(() => {
-    if (!highlightedKey) return data
+    if (correctKeys.length === 0) return data
     return data.map(([hcKey, value]) => {
-      if (hcKey !== highlightedKey) return [hcKey, value] as MapDatum
+      if (!correctKeySet.has(hcKey)) return [hcKey, value] as MapDatum
       return {
         'hc-key': hcKey,
         value,
         color: '#22c55e',
       }
     })
-  }, [data, highlightedKey])
+  }, [correctKeySet, correctKeys.length, data])
 
   useEffect(() => {
     let cancelled = false
@@ -93,6 +90,14 @@ export function HighchartsMapDemo() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!picked || !selected) return
+    if (picked !== selected) return
+    const key = nameToKey.get(selected)
+    if (!key) return
+    setCorrectKeys((prev) => (prev.includes(key) ? prev : [...prev, key]))
+  }, [nameToKey, picked, selected])
 
   const options = useMemo(() => {
     return {
@@ -135,7 +140,8 @@ export function HighchartsMapDemo() {
           point: {
             events: {
               click: function (this: any) {
-                setSelected(String(this?.name ?? ''))
+                const name = String(this?.name ?? '')
+                setSelected(name)
               },
             },
           },
@@ -159,7 +165,11 @@ export function HighchartsMapDemo() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => setSelected(null)}
+            onClick={() => {
+              setSelected(null)
+              setPicked(null)
+              setCorrectKeys([])
+            }}
           >
             Clear selection
           </Button>
