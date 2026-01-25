@@ -258,7 +258,9 @@ export function HighchartsMapDemo() {
                   <li key={name}>
                     <button
                       type="button"
-                      className="hover:bg-muted w-full rounded px-2 py-1 text-left"
+                      className={`hover:bg-muted w-full rounded px-2 py-1 text-left ${
+                        picked === name ? 'bg-muted text-foreground' : ''
+                      }`}
                       onClick={() => setPicked(name)}
                     >
                       {name}
