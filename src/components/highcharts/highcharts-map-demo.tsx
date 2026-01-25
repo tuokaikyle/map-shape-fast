@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import worldMap from '@highcharts/map-collection/custom/world.geo.json'
 
@@ -36,6 +36,21 @@ export function HighchartsMapDemo() {
   const [selected, setSelected] = useState<string | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
 
+  const nameToKey = useMemo(() => {
+    const features = (worldMap as any)?.features ?? []
+    const mapping = new Map<string, string>()
+
+    for (const feature of features) {
+      const name = String(feature?.properties?.name ?? '')
+      const hcKey = String(feature?.properties?.['hc-key'] ?? '')
+      if (name && hcKey && !mapping.has(name)) {
+        mapping.set(name, hcKey)
+      }
+    }
+
+    return mapping
+  }, [])
+
   const countryNames = useMemo(() => {
     const features = (worldMap as any)?.features ?? []
     return features
@@ -43,6 +58,24 @@ export function HighchartsMapDemo() {
       .filter(Boolean)
       .sort((a: string, b: string) => a.localeCompare(b))
   }, [])
+
+  const highlightedKey = useMemo(() => {
+    if (!picked || !selected) return null
+    if (picked !== selected) return null
+    return nameToKey.get(selected) ?? null
+  }, [nameToKey, picked, selected])
+
+  const seriesData = useMemo(() => {
+    if (!highlightedKey) return data
+    return data.map(([hcKey, value]) => {
+      if (hcKey !== highlightedKey) return [hcKey, value] as MapDatum
+      return {
+        'hc-key': hcKey,
+        value,
+        color: '#22c55e',
+      }
+    })
+  }, [data, highlightedKey])
 
   useEffect(() => {
     let cancelled = false
@@ -93,9 +126,8 @@ export function HighchartsMapDemo() {
         {
           type: 'map',
           name: 'Value',
-          data,
+          data: seriesData,
           joinBy: 'hc-key',
-          states: { hover: { color: '#f59e0b' } },
           borderColor: 'rgba(0,0,0,0.15)',
           borderWidth: 0.5,
           nullColor: 'rgba(0,0,0,0.04)',
@@ -111,7 +143,7 @@ export function HighchartsMapDemo() {
       ],
       credits: { enabled: false },
     }
-  }, [data])
+  }, [seriesData])
 
   return (
     <Card>
