@@ -86,13 +86,14 @@ export function HighchartsMapDemo() {
     return mapFeatures.filter((feature) => feature.continent === selectedRegion)
   }, [mapFeatures, selectedRegion])
 
+  const correctKeySet = useMemo(() => new Set(correctKeys), [correctKeys])
+
   const countryNames = useMemo(() => {
     return filteredFeatures
+      .filter((feature) => !correctKeySet.has(feature.hcKey))
       .map((feature) => feature.name)
       .sort((a: string, b: string) => a.localeCompare(b))
-  }, [filteredFeatures])
-
-  const correctKeySet = useMemo(() => new Set(correctKeys), [correctKeys])
+  }, [correctKeySet, filteredFeatures])
 
   const regionKeySet = useMemo(() => {
     if (selectedRegion === 'All regions') return null
