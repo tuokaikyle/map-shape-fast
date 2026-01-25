@@ -106,16 +106,30 @@ export function HighchartsMapDemo() {
   }, [data, regionKeySet])
 
   const seriesData = useMemo(() => {
-    if (correctKeys.length === 0) return filteredData
+    const selectedKey = selected ? nameToKey.get(selected) : null
+
     return filteredData.map(([hcKey, value]) => {
-      if (!correctKeySet.has(hcKey)) return [hcKey, value] as MapDatum
-      return {
-        'hc-key': hcKey,
-        value,
-        color: '#22c55e',
+      // If this country is correct, color it green
+      if (correctKeySet.has(hcKey)) {
+        return {
+          'hc-key': hcKey,
+          value,
+          color: '#22c55e',
+        }
       }
+
+      // If picked is null and selected is not null, color the selected country orange
+      if (!picked && selected && hcKey === selectedKey) {
+        return {
+          'hc-key': hcKey,
+          value,
+          color: '#f97316',
+        }
+      }
+
+      return [hcKey, value] as MapDatum
     })
-  }, [correctKeySet, correctKeys.length, filteredData])
+  }, [correctKeySet, filteredData, selected, picked, nameToKey])
 
   useEffect(() => {
     let cancelled = false
@@ -140,6 +154,9 @@ export function HighchartsMapDemo() {
     const key = nameToKey.get(selected)
     if (!key) return
     setCorrectKeys((prev) => (prev.includes(key) ? prev : [...prev, key]))
+    // Reset both to null when they match
+    setPicked(null)
+    setSelected(null)
   }, [nameToKey, picked, selected])
 
   const options = useMemo(() => {
@@ -254,25 +271,36 @@ export function HighchartsMapDemo() {
             </div>
             <div className="h-[520px] overflow-auto rounded-lg border p-2">
               <ul className="space-y-1 text-sm">
-                {countryNames.map((name: string) => (
-                  <li key={name}>
-                    <button
-                      type="button"
-                      className={`hover:bg-muted w-full rounded px-2 py-1 text-left ${
-                        picked === name ? 'bg-muted text-foreground' : ''
-                      }`}
-                      onClick={() => setPicked(name)}
-                    >
-                      {name}
-                    </button>
-                  </li>
-                ))}
+                {countryNames.map((name: string) => {
+                  // If picked is not null and selected is null, set orange background for picked
+                  const isOrange =
+                    picked === name && picked !== null && selected === null
+                  const isRegular = picked === name && !isOrange
+
+                  return (
+                    <li key={name}>
+                      <button
+                        type="button"
+                        className={`w-full rounded px-2 py-1 text-left ${
+                          isOrange
+                            ? 'bg-orange-500 text-white'
+                            : isRegular
+                              ? 'bg-muted text-foreground hover:bg-muted'
+                              : 'hover:bg-muted'
+                        }`}
+                        onClick={() => setPicked(name)}
+                      >
+                        {name}
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           </div>
         </div>
       </CardContent>
-      {/* <CardFooter className="text-muted-foreground text-sm">
+      <CardFooter className="text-muted-foreground text-sm">
         <div className="flex flex-col gap-1">
           {selected ? (
             <span>
@@ -289,7 +317,7 @@ export function HighchartsMapDemo() {
             </span>
           ) : null}
         </div>
-      </CardFooter> */}
+      </CardFooter>
     </Card>
   )
 }

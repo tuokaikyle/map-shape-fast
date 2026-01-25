@@ -141,5 +141,6 @@ Please file feedback and issues [here](https://github.com/michaeltroya/supa-next
 ## Dev log
 
 ultra high definition better, see the size
-pick region
-zoom to area by double click
+bi directional to-select color is orange
+hint show tooltip
+drag and drop
