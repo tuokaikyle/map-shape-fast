@@ -26,8 +26,7 @@ function buildRandomMapData(): MapDatum[] {
   const data = features
     .map((f: any) => String(f?.properties?.['hc-key'] ?? ''))
     .filter(Boolean)
-    .map((hcKey: string) => [hcKey, Math.round(Math.random() * 100)])
-  console.log(features.map((f: any) => f.properties)[50])
+    .map((hcKey: string) => [hcKey, 20])
   return data
 }
 
@@ -51,11 +50,6 @@ export function HighchartsMapDemo() {
     return () => {
       cancelled = true
     }
-  }, [])
-
-  const randomize = useCallback(() => {
-    setSelected(null)
-    setData(buildRandomMapData())
   }, [])
 
   const options = useMemo(() => {
@@ -82,9 +76,6 @@ export function HighchartsMapDemo() {
           [0.5, '#60a5fa'],
           [1, '#1d4ed8'],
         ],
-      },
-      legend: {
-        title: { text: 'Random value (0–100)' },
       },
       tooltip: {
         pointFormat: '<b>{point.name}</b><br/>Value: {point.value}',
@@ -124,9 +115,6 @@ export function HighchartsMapDemo() {
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" onClick={randomize}>
-            Randomize
-          </Button>
           <Button
             type="button"
             variant="outline"
