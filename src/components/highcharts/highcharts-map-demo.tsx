@@ -34,6 +34,15 @@ export function HighchartsMapDemo() {
   const [Highcharts, setHighcharts] = useState<any>(null)
   const [data, setData] = useState<MapDatum[]>(() => buildRandomMapData())
   const [selected, setSelected] = useState<string | null>(null)
+  const [picked, setPicked] = useState<string | null>(null)
+
+  const countryNames = useMemo(() => {
+    const features = (worldMap as any)?.features ?? []
+    return features
+      .map((f: any) => String(f?.properties?.name ?? ''))
+      .filter(Boolean)
+      .sort((a: string, b: string) => a.localeCompare(b))
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -125,27 +134,59 @@ export function HighchartsMapDemo() {
         </div>
       </CardHeader>
       <CardContent>
-        {!Highcharts ? (
-          <div className="text-muted-foreground flex h-[520px] items-center justify-center rounded-lg border">
-            Loading Highcharts…
+        <div className="flex flex-col gap-4 lg:flex-row">
+          <div className="flex-1">
+            {!Highcharts ? (
+              <div className="text-muted-foreground flex h-[520px] items-center justify-center rounded-lg border">
+                Loading Highcharts…
+              </div>
+            ) : (
+              <HighchartsReact
+                highcharts={Highcharts}
+                constructorType="mapChart"
+                options={options}
+              />
+            )}
           </div>
-        ) : (
-          <HighchartsReact
-            highcharts={Highcharts}
-            constructorType="mapChart"
-            options={options}
-          />
-        )}
+          <div className="lg:w-64">
+            <div className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
+              Countries
+            </div>
+            <div className="h-[520px] overflow-auto rounded-lg border p-2">
+              <ul className="space-y-1 text-sm">
+                {countryNames.map((name: string) => (
+                  <li key={name}>
+                    <button
+                      type="button"
+                      className="hover:bg-muted w-full rounded px-2 py-1 text-left"
+                      onClick={() => setPicked(name)}
+                    >
+                      {name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="text-muted-foreground text-sm">
-        {selected ? (
-          <span>
-            Selected:{' '}
-            <span className="text-foreground font-medium">{selected}</span>
-          </span>
-        ) : (
-          <span>Tip: click a country to select it.</span>
-        )}
+        <div className="flex flex-col gap-1">
+          {selected ? (
+            <span>
+              Selected:{' '}
+              <span className="text-foreground font-medium">{selected}</span>
+            </span>
+          ) : (
+            <span>Tip: click a country to select it.</span>
+          )}
+          {picked ? (
+            <span>
+              Picked:{' '}
+              <span className="text-foreground font-medium">{picked}</span>
+            </span>
+          ) : null}
+        </div>
       </CardFooter>
     </Card>
   )
