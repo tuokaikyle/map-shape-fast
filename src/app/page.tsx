@@ -16,6 +16,12 @@ export default function Home() {
           <div className="flex w-full max-w-5xl items-center justify-between p-3 px-5 text-sm">
             <div className="flex items-center gap-5 font-semibold">
               <Link href={'/'}>Next.js Supabase Starter</Link>
+              <Link
+                href="/highcharts-map"
+                className="text-muted-foreground hover:text-foreground font-normal"
+              >
+                Highcharts Map Demo
+              </Link>
             </div>
             {!hasEnvVars ? (
               <EnvVarWarning />
