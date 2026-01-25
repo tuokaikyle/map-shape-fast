@@ -1,11 +1,10 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import worldMap from '@highcharts/map-collection/custom/world.geo.json'
 
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -19,22 +18,64 @@ const HighchartsReact = dynamic(() => import('highcharts-react-official'), {
   ssr: false,
 })
 
-type MapDatum = [hcKey: string, value: number]
+type RegionId =
+  | 'world'
+  | 'africa'
+  | 'asia'
+  | 'europe'
+  | 'north-america'
+  | 'south-america'
+  | 'oceania'
 
-function buildRandomMapData(): MapDatum[] {
-  const features = (worldMap as any)?.features ?? []
-  const data = features
-    .map((f: any) => String(f?.properties?.['hc-key'] ?? ''))
-    .filter(Boolean)
-    .map((hcKey: string) => [hcKey, Math.round(Math.random() * 100)])
-  console.log(features.map((f: any) => f.properties)[50])
-  return data
+const REGIONS: Array<{ id: RegionId; label: string }> = [
+  { id: 'world', label: 'World' },
+  { id: 'africa', label: 'Africa' },
+  { id: 'asia', label: 'Asia' },
+  { id: 'europe', label: 'Europe' },
+  { id: 'north-america', label: 'North America' },
+  { id: 'south-america', label: 'South America' },
+  { id: 'oceania', label: 'Oceania' },
+]
+
+async function loadRegionGeoJson(region: Exclude<RegionId, 'world'>) {
+  switch (region) {
+    case 'africa': {
+      const m =
+        await import('@highcharts/map-collection/custom/africa.geo.json')
+      return (m as any).default ?? m
+    }
+    case 'asia': {
+      const m = await import('@highcharts/map-collection/custom/asia.geo.json')
+      return (m as any).default ?? m
+    }
+    case 'europe': {
+      const m =
+        await import('@highcharts/map-collection/custom/europe.geo.json')
+      return (m as any).default ?? m
+    }
+    case 'north-america': {
+      const m =
+        await import('@highcharts/map-collection/custom/north-america.geo.json')
+      return (m as any).default ?? m
+    }
+    case 'south-america': {
+      const m =
+        await import('@highcharts/map-collection/custom/south-america.geo.json')
+      return (m as any).default ?? m
+    }
+    case 'oceania': {
+      const m =
+        await import('@highcharts/map-collection/custom/oceania.geo.json')
+      return (m as any).default ?? m
+    }
+  }
 }
 
 export function HighchartsMapDemo() {
   const [Highcharts, setHighcharts] = useState<any>(null)
-  const [data, setData] = useState<MapDatum[]>(() => buildRandomMapData())
-  const [selected, setSelected] = useState<string | null>(null)
+  const [region, setRegion] = useState<RegionId>('world')
+  const [mapGeoJSON, setMapGeoJSON] = useState<any>(worldMap as any)
+  const [isSwitching, setIsSwitching] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -53,17 +94,41 @@ export function HighchartsMapDemo() {
     }
   }, [])
 
-  const randomize = useCallback(() => {
-    setSelected(null)
-    setData(buildRandomMapData())
-  }, [])
+  useEffect(() => {
+    let cancelled = false
+
+    async function run() {
+      if (region === 'world') {
+        setMapGeoJSON(worldMap as any)
+        return
+      }
+
+      setIsSwitching(true)
+      try {
+        const geo = await loadRegionGeoJson(region)
+        if (cancelled) return
+        setMapGeoJSON(geo)
+      } finally {
+        if (!cancelled) setIsSwitching(false)
+      }
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [region])
+
+  const regionLabel = REGIONS.find((r) => r.id === region)?.label ?? 'World'
 
   const options = useMemo(() => {
     return {
       chart: {
-        map: worldMap,
+        map: mapGeoJSON,
         height: 520,
         spacing: [16, 16, 16, 16],
+        animation: { duration: 450 },
       },
       title: {
         text: undefined,
@@ -74,90 +139,78 @@ export function HighchartsMapDemo() {
           verticalAlign: 'bottom',
         },
       },
-      colorAxis: {
-        min: 0,
-        max: 100,
-        stops: [
-          [0, '#eff6ff'],
-          [0.5, '#60a5fa'],
-          [1, '#1d4ed8'],
-        ],
-      },
-      legend: {
-        title: { text: 'Random value (0–100)' },
-      },
       tooltip: {
-        pointFormat: '<b>{point.name}</b><br/>Value: {point.value}',
+        pointFormat: '<b>{point.name}</b>',
       },
       series: [
         {
           type: 'map',
-          name: 'Value',
-          data,
-          joinBy: 'hc-key',
-          states: { hover: { color: '#f59e0b' } },
+          name: 'Areas',
+          data: [],
+          allAreas: true,
+          enableMouseTracking: true,
+          states: { hover: { color: 'rgba(245,158,11,0.55)' } },
           borderColor: 'rgba(0,0,0,0.15)',
           borderWidth: 0.5,
-          nullColor: 'rgba(0,0,0,0.04)',
+          nullColor: 'rgba(0,0,0,0.03)',
           dataLabels: { enabled: false },
-          point: {
-            events: {
-              click: function (this: any) {
-                setSelected(String(this?.name ?? ''))
-              },
-            },
-          },
         },
       ],
       credits: { enabled: false },
     }
-  }, [data])
+  }, [mapGeoJSON])
 
   return (
     <Card>
       <CardHeader className="gap-3">
         <div className="flex flex-col gap-1">
-          <CardTitle>Highcharts Maps: World</CardTitle>
+          <CardTitle>Highcharts Maps: {regionLabel}</CardTitle>
           <CardDescription>
-            Pan/zoom with the built-in controls, then click a country to select
-            it. Use “Randomize” to regenerate data.
+            Choose a region/continent to display. The map will transition to the
+            selected region.
           </CardDescription>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" onClick={randomize}>
-            Randomize
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setSelected(null)}
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm font-medium">Region</label>
+          <select
+            className="border-input focus-visible:ring-ring h-9 rounded-md border bg-transparent px-3 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            value={region}
+            onChange={(e) => setRegion(e.target.value as RegionId)}
+            disabled={!Highcharts || isSwitching}
           >
-            Clear selection
-          </Button>
+            {REGIONS.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </select>
         </div>
       </CardHeader>
       <CardContent>
-        {!Highcharts ? (
-          <div className="text-muted-foreground flex h-[520px] items-center justify-center rounded-lg border">
-            Loading Highcharts…
-          </div>
-        ) : (
-          <HighchartsReact
-            highcharts={Highcharts}
-            constructorType="mapChart"
-            options={options}
-          />
-        )}
+        <div className="relative">
+          {!Highcharts ? (
+            <div className="text-muted-foreground flex h-[520px] items-center justify-center rounded-lg border">
+              Loading Highcharts…
+            </div>
+          ) : (
+            <HighchartsReact
+              key={region}
+              highcharts={Highcharts}
+              constructorType="mapChart"
+              options={options}
+            />
+          )}
+          {isSwitching ? (
+            <div className="bg-background/70 absolute inset-0 flex items-center justify-center rounded-lg backdrop-blur-sm">
+              <div className="text-muted-foreground text-sm">
+                Loading {regionLabel}…
+              </div>
+            </div>
+          ) : null}
+        </div>
       </CardContent>
       <CardFooter className="text-muted-foreground text-sm">
-        {selected ? (
-          <span>
-            Selected:{' '}
-            <span className="text-foreground font-medium">{selected}</span>
-          </span>
-        ) : (
-          <span>Tip: click a country to select it.</span>
-        )}
+        <span>Tip: use the map navigation buttons to zoom/pan.</span>
       </CardFooter>
     </Card>
   )
