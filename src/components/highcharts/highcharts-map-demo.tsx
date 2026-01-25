@@ -33,7 +33,7 @@ type MapFeature = {
   continent: string
 }
 
-function buildRandomMapData(): MapDatum[] {
+function buildMapData(): MapDatum[] {
   const features = (worldMap as any)?.features ?? []
   const data = features
     .map((f: any) => String(f?.properties?.['hc-key'] ?? ''))
@@ -44,7 +44,7 @@ function buildRandomMapData(): MapDatum[] {
 
 export function HighchartsMapDemo() {
   const [Highcharts, setHighcharts] = useState<any>(null)
-  const [data, setData] = useState<MapDatum[]>(() => buildRandomMapData())
+  const [data, setData] = useState<MapDatum[]>(() => buildMapData())
   const [selected, setSelected] = useState<string | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
   const [correctKeys, setCorrectKeys] = useState<string[]>([])
@@ -158,26 +158,18 @@ export function HighchartsMapDemo() {
           verticalAlign: 'bottom',
         },
       },
-      colorAxis: {
-        min: 0,
-        max: 100,
-        stops: [
-          [0, '#eff6ff'],
-          [0.5, '#60a5fa'],
-          [1, '#1d4ed8'],
-        ],
-      },
       tooltip: {
-        pointFormat: '<b>{point.name}</b><br/>Value: {point.value}',
+        enabled: false,
+        pointFormat: '<h3>{point.name}</h3>',
       },
       series: [
         {
           type: 'map',
-          name: 'Value',
+          name: 'Name',
           data: seriesData,
           joinBy: 'hc-key',
           allAreas: selectedRegion === 'All regions',
-          borderColor: 'rgba(0,0,0,0.15)',
+          borderColor: 'rgba(0, 0, 0, 0.15)',
           borderWidth: 0.5,
           nullColor: 'rgba(0,0,0,0.04)',
           dataLabels: { enabled: false },
@@ -201,8 +193,8 @@ export function HighchartsMapDemo() {
         <div className="flex flex-col gap-1">
           <CardTitle>Highcharts Maps: World</CardTitle>
           <CardDescription>
-            Pan/zoom with the built-in controls, then click a country to select
-            it. Use “Randomize” to regenerate data.
+            Pan/zoom with the built-in controls, then click a country name to
+            select it. Then pick the correct country from the map on the left.
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -278,7 +270,7 @@ export function HighchartsMapDemo() {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="text-muted-foreground text-sm">
+      {/* <CardFooter className="text-muted-foreground text-sm">
         <div className="flex flex-col gap-1">
           {selected ? (
             <span>
@@ -295,7 +287,7 @@ export function HighchartsMapDemo() {
             </span>
           ) : null}
         </div>
-      </CardFooter>
+      </CardFooter> */}
     </Card>
   )
 }
