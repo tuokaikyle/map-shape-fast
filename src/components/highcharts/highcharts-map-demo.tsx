@@ -49,6 +49,19 @@ export function HighchartsMapDemo() {
   const [picked, setPicked] = useState<string | null>(null)
   const [correctKeys, setCorrectKeys] = useState<string[]>([])
   const [selectedRegion, setSelectedRegion] = useState<string>('All regions')
+  const [selectedTimestamp, setSelectedTimestamp] = useState<number>(0)
+  const [pickedTimestamp, setPickedTimestamp] = useState<number>(0)
+
+  // Helper functions to update state with timestamps
+  const updateSelected = (value: string | null) => {
+    setSelected(value)
+    setSelectedTimestamp(Date.now())
+  }
+
+  const updatePicked = (value: string | null) => {
+    setPicked(value)
+    setPickedTimestamp(Date.now())
+  }
 
   const mapFeatures = useMemo<MapFeature[]>(() => {
     const features = (worldMap as any)?.features ?? []
@@ -150,14 +163,24 @@ export function HighchartsMapDemo() {
 
   useEffect(() => {
     if (!picked || !selected) return
-    if (picked !== selected) return
+
+    // Failed match: reset whichever was set more recently
+    if (picked !== selected) {
+      if (pickedTimestamp > selectedTimestamp) {
+        setPicked(null)
+      } else {
+        setSelected(null)
+      }
+      return
+    }
+
+    // Successful match: mark as correct and reset both
     const key = nameToKey.get(selected)
     if (!key) return
     setCorrectKeys((prev) => (prev.includes(key) ? prev : [...prev, key]))
-    // Reset both to null when they match
     setPicked(null)
     setSelected(null)
-  }, [nameToKey, picked, selected])
+  }, [nameToKey, picked, selected, pickedTimestamp, selectedTimestamp])
 
   const options = useMemo(() => {
     return {
@@ -194,7 +217,7 @@ export function HighchartsMapDemo() {
             events: {
               click: function (this: any) {
                 const name = String(this?.name ?? '')
-                setSelected(name)
+                updateSelected(name)
               },
             },
           },
@@ -202,7 +225,7 @@ export function HighchartsMapDemo() {
       ],
       credits: { enabled: false },
     }
-  }, [selectedRegion, seriesData])
+  }, [selectedRegion, seriesData, updateSelected])
 
   return (
     <Card>
@@ -288,7 +311,7 @@ export function HighchartsMapDemo() {
                               ? 'bg-muted text-foreground hover:bg-muted'
                               : 'hover:bg-muted'
                         }`}
-                        onClick={() => setPicked(name)}
+                        onClick={() => updatePicked(name)}
                       >
                         {name}
                       </button>
